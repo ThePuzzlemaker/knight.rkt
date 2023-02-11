@@ -6,3 +6,5 @@
 (define version "0.1.0")
 (define pkg-authors '(ThePuzzlemaker))
 (define license '(Apache-2.0 OR MIT))
+(define compile-omit-paths '("private"))
+(define test-omit-paths '("private"))

@@ -12,7 +12,7 @@
   (upper (:/ #\A #\Z))
   (digit (:/ #\0 #\9)))
 
-(define-tokens basic-tokens (NUM STR VAR EXTFUNC))
+(define-tokens basic-tokens (NUM STR VAR EXTFUNC EXTRKT))
 (define-empty-tokens punct-tokens (EOF))
 (define-empty-tokens func-tokens (T F N P R B C
                                     Q O D L A W
@@ -22,6 +22,11 @@
 
 (define knight-lexer
   (lexer-src-pos
+   [(:: "#;racket " (:* (:~ #\;)) #\;)
+    (token-EXTRKT
+     (substring lexeme
+                (string-length "#;racket ")
+                (sub1 (string-length lexeme))))]
    [(:: #\# (:* (:~ #\newline)) (:? #\newline))
     (return-without-pos (knight-lexer input-port))]
    [(:or whitespace
@@ -91,47 +96,48 @@
            func-tokens]
    [grammar [expr [(T) #t]
                   [(F) #f]
-                  [(N) 'null]
-                  [(@) '(list)]
-                  [(P) 'prompt]
-                  [(R) 'random]
-                  [(B expr) `(block . ,$2)]
-                  [(C expr) `(call . ,$2)]
-                  [(Q expr) `(quit . ,$2)]
-                  [(D expr) `(dump . ,$2)]
-                  [(O expr) `(output . ,$2)]
-                  [(L expr) `(length . ,$2)]
-                  [(! expr) `(! . ,$2)]
-                  [(~ expr) `(~ . ,$2)]
-                  [(A expr) `(ascii . ,$2)]
-                  [(V expr) `(value . ,$2)]
-                  [(U expr) `(use . ,$2)]
-                  [(E expr) `(eval . ,$2)]
-                  [(COMMA expr) `(box . ,$2)]
-                  [(LBRACKET expr) `(head . ,$2)]
-                  [(RBRACKET expr) `(tail . ,$2)]
-                  [(+ expr expr) `(+ ,$2 . ,$3)]
-                  [(- expr expr) `(- ,$2 . ,$3)]
-                  [(* expr expr) `(* ,$2 . ,$3)]
-                  [(/ expr expr) `(/ ,$2 . ,$3)]
-                  [(% expr expr) `(% ,$2 . ,$3)]
-                  [(^ expr expr) `(^ ,$2 . ,$3)]
-                  [(< expr expr) `(< ,$2 . ,$3)]
-                  [(> expr expr) `(> ,$2 . ,$3)]
-                  [(? expr expr) `(? ,$2 . ,$3)]
-                  [(& expr expr) `(& ,$2 . ,$3)]
-                  [(PIPE expr expr) `(or ,$2 . ,$3)]
-                  [(SEMI expr expr) `(seq ,$2 . ,$3)]
-                  [(= expr expr) `(= ,$2 . ,$3)]
-                  [(W expr expr) `(while ,$2 . ,$3)]
-                  [($ expr expr) `($ ,$2 . ,$3)]
-                  [(I expr expr expr) `(if ,$2 ,$3 . ,$4)]
-                  [(G expr expr expr) `(get ,$2 ,$3 . ,$4)]
-                  [(S expr expr expr expr) `(set ,$2 ,$3 ,$4 . ,$5)]
+                  [(N) 'kn-null]
+                  [(@) ''()]
+                  [(P) '(kn-prompt)]
+                  [(R) '(kn-random)]
+                  [(B expr) `(kn-block ,$2)]
+                  [(C expr) `(kn-call ,$2)]
+                  [(Q expr) `(kn-quit ,$2)]
+                  [(D expr) `(kn-dump ,$2)]
+                  [(O expr) `(kn-output ,$2)]
+                  [(L expr) `(kn-length ,$2)]
+                  [(! expr) `(kn-not ,$2)]
+                  [(~ expr) `(kn-negate ,$2)]
+                  [(A expr) `(kn-ascii ,$2)]
+                  [(V expr) `(kn-value ,$2)]
+                  [(U expr) `(kn-use ,$2)]
+                  [(E expr) `(kn-eval ,$2)]
+                  [(COMMA expr) `(kn-box ,$2)]
+                  [(LBRACKET expr) `(kn-head ,$2)]
+                  [(RBRACKET expr) `(kn-tail ,$2)]
+                  [(+ expr expr) `(kn+ ,$2 ,$3)]
+                  [(- expr expr) `(kn- ,$2 ,$3)]
+                  [(* expr expr) `(kn* ,$2 ,$3)]
+                  [(/ expr expr) `(kn/ ,$2 ,$3)]
+                  [(% expr expr) `(kn% ,$2 ,$3)]
+                  [(^ expr expr) `(kn^ ,$2 ,$3)]
+                  [(< expr expr) `(kn<? ,$2 ,$3)]
+                  [(> expr expr) `(kn>? ,$2 ,$3)]
+                  [(? expr expr) `(kn=? ,$2 ,$3)]
+                  [(& expr expr) `(kn-and ,$2 #',$3)]
+                  [(PIPE expr expr) `(kn-or ,$2 #',$3)]
+                  [(SEMI expr expr) `(kn-seq ,$2 ,$3)]
+                  [(= expr expr) `(kn= ,$2 ,$3)]
+                  [(W expr expr) `(kn-while #',$2 #',$3)]
+                  [($ expr expr) `(kn-shell ,$2 ,$3)]
+                  [(I expr expr expr) `(kn-if ,$2 #',$3 #',$4)]
+                  [(G expr expr expr) `(kn-get ,$2 ,$3 ,$4)]
+                  [(S expr expr expr expr) `(kn-set ,$2 ,$3 ,$4 ,$5)]
                   [(NUM) $1]
                   [(STR) $1]
-                  [(VAR) `(var . ,$1)]]
-            [expr-or-empty [() '()]
+                  [(VAR) `(kn-var ,$1)]
+                  [(EXTRKT) (syntax->datum (read-syntax "evaled racket code" (open-input-string $1)))]]
+            [expr-or-empty [() 'kn-null]
                            [(expr) $1]]]))
 
 (define (call-parser port-or-str [name "input"])
